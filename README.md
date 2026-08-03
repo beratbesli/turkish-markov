@@ -5,6 +5,21 @@ Derlemi veya geçiş grafiğini RAM'e yüklemeden kelime düzeyinde cümle model
 
 Projenin Python 3.10+ ve SQLite (Python ile birlikte gelir) dışında hiçbir çalışma zamanı (runtime) bağımlılığı yoktur. Tüm çoklu işlem (multiprocessing) giriş noktaları modül düzeyinde olduğu ve yürütülebilir giriş noktası korunduğu için Windows üzerinde güvenle çalıştırılabilir.
 
+## Veri Seti ve Önceden Eğitilmiş Veritabanı / Dataset & Pre-trained Database
+
+GitHub'ın dosya boyutu sınırları nedeniyle, büyük veri seti ve önceden indekslenmiş veritabanı **Hugging Face** üzerinde barındırılmaktadır:
+> 🔗 **Hugging Face Dataset:** [https://huggingface.co/datasets/beert00/turkish-markov](https://huggingface.co/datasets/beert00/turkish-markov)
+
+Projeyi kullanmak için aşağıdaki iki seçenekten birini tercih edebilirsiniz:
+
+- **Seçenek A - Hızlı Başlangıç (Option A: Quick Start):**
+  - Doğrudan **[`turkish.db` (Direct Link)](https://huggingface.co/datasets/beert00/turkish-markov/resolve/main/turkish.db)** dosyasını indirin.
+  - Dosyayı proje ana dizinine (root directory) yerleştirin (gerekiyorsa adını `turkish` olarak değiştirin / *renaming to `turkish` if required*) ve hemen çalıştırmaya başlayın.
+
+- **Seçenek B - Sıfırdan Eğitme/İndeksleme (Option B: Train/Build from Scratch):**
+  - Veri setini incelemek veya sıfırdan model eğitmek/indekslendirmek isterseniz **[`birlesmis.txt` (Direct Link)](https://huggingface.co/datasets/beert00/turkish-markov/resolve/main/birlesmis.txt)** dosyasını indirin.
+  - İndirdiğiniz ham derlem ile CLI üzerinden yeniden indeksleme yapabilirsiniz.
+
 ## Windows grafik arayüzü
 
 Uygulamayı bir terminal penceresi olmadan tarayıcınızda açmak için `arayuz.pyw` dosyasına çift tıklayın. Yalnızca yerel bilgisayarınızda çalışır ve derlemi veya üretilen metni hiçbir yere yüklemez. İlk sekme `turkish.db` veritabanından metin üretir; ikinci sekme yeni bir veritabanı oluşturur ve ilerlemeyi görüntüler.
