@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "turkish-markov"
+version = "1.0.0"
+description = "Streaming, disk-backed Turkish word and character Markov generator"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Turkish Markov contributors"}]
+dependencies = []
+
+[project.scripts]
+turkish-markov = "turkish_markov.cli:main"
+turkish-markov-gui = "turkish_markov.webgui:main"
+
+[tool.setuptools.packages.find]
+include = ["turkish_markov*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

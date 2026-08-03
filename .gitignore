@@ -1,0 +1,26 @@
+# Dataset files
+birlesmis
+birlesmis.txt
+
+# Database files
+turkish
+turkish.db
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+
+# Python cache & build
+__pycache__/
+*.py[cod]
+.*.building
+.pytest_cache/
+build/
+dist/
+*.egg-info/
+
+# Linting & secret configuration
+.secretlintrc
+.secretlintrc.json
+.secretlintrc.*
