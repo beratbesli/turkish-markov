@@ -24,3 +24,12 @@ dist/
 .secretlintrc
 .secretlintrc.json
 .secretlintrc.*
+.env
+.env.*
+.venv/
+venv/
+env/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
