@@ -10,10 +10,18 @@ Projenin Python 3.10+ ve SQLite (Python ile birlikte gelir) dışında hiçbir �
 GitHub'ın dosya boyutu sınırları nedeniyle, büyük veri seti ve önceden indekslenmiş veritabanı **Hugging Face** üzerinde barındırılmaktadır:
 > 🔗 **Hugging Face Dataset:** [https://huggingface.co/datasets/beert00/turkish-markov](https://huggingface.co/datasets/beert00/turkish-markov)
 
+> **Önemli veri yönetişimi notu:** Bağlantılı dosyalar için kaynak bazlı provenance,
+> yeniden dağıtım hakkı ve SHA-256 kayıtları henüz bu depoda doğrulanabilir şekilde
+> tamamlanmamıştır. Hugging Face üzerindeki bir lisans etiketi bu zincirin yerine geçmez.
+> Bu durum herhangi bir ihlal iddiası değildir; olumlu lisans iddiası için kanıtın eksik
+> olduğunu belirtir. İnceleme tamamlanana kadar dosyaları kaynağı doğrulanmış bir yayın
+> olarak kabul etmeyin. Ayrıntılar: [`docs/DATA_GOVERNANCE.md`](docs/DATA_GOVERNANCE.md).
+
 Projeyi kullanmak için aşağıdaki iki seçenekten birini tercih edebilirsiniz:
 
 - **Seçenek A - Hızlı Başlangıç (Option A: Quick Start):**
   - Doğrudan **[`turkish.db` (Direct Link)](https://huggingface.co/datasets/beert00/turkish-markov/resolve/main/turkish.db)** dosyasını indirin.
+  - Yalnızca yayın sayfasında doğrulanmış SHA-256 değeri varsa dosyayı bu değerle karşılaştırın.
   - Dosyayı proje ana dizinine (root directory) yerleştirin (gerekiyorsa adını `turkish` olarak değiştirin / *renaming to `turkish` if required*) ve hemen çalıştırmaya başlayın.
 
 - **Seçenek B - Sıfırdan Eğitme/İndeksleme (Option B: Train/Build from Scratch):**
@@ -119,3 +127,14 @@ python -m unittest discover -v
 
 Normal testler küçük geçici derlemler kullanır. Çok gigabaytlık derlem test paketi tarafından hiçbir zaman okunmaz.
 
+## Katkı, güvenlik ve yayınlama
+
+- Katkı kuralları: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Güvenlik politikası: [`SECURITY.md`](SECURITY.md)
+- Değişiklik günlüğü: [`CHANGELOG.md`](CHANGELOG.md)
+- Veri yayınlama kapısı: [`docs/DATA_GOVERNANCE.md`](docs/DATA_GOVERNANCE.md)
+
+Her push ve pull request Python 3.10–3.14 üzerinde test edilir; kaynak dağıtımı, wheel,
+kurulum ve CLI smoke testi doğrulanır. `vX.Y.Z` etiketi yalnızca checksum içeren bir
+release-candidate Actions artifact'i üretir. GitHub sürümü, changelog ve veri yönetişimi
+durumu insan tarafından incelendikten sonra manuel yayımlanır.
