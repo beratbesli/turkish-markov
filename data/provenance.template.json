@@ -1,0 +1,41 @@
+{
+  "manifest_version": "1.0",
+  "status": "unverified-template",
+  "dataset": {
+    "name": "TODO",
+    "revision": "TODO",
+    "published_at_utc": "TODO"
+  },
+  "sources": [
+    {
+      "name": "TODO",
+      "url": "TODO",
+      "retrieved_at_utc": "TODO",
+      "sha256": "TODO",
+      "license_id": "NOASSERTION",
+      "license_evidence_url": "TODO",
+      "redistribution_basis": "TODO",
+      "attribution": "TODO"
+    }
+  ],
+  "transformation": {
+    "repository": "https://github.com/beratbesli/turkish-markov",
+    "commit": "TODO",
+    "command": "TODO",
+    "python_version": "TODO",
+    "sqlite_version": "TODO"
+  },
+  "outputs": [
+    {
+      "path": "TODO",
+      "bytes": 0,
+      "sha256": "TODO",
+      "records": 0
+    }
+  ],
+  "review": {
+    "reviewer": "TODO",
+    "reviewed_at_utc": "TODO",
+    "notes": "TODO"
+  }
+}
