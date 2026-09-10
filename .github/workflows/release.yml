@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -25,5 +26,26 @@ jobs:
           path: dist/
           if-no-files-found: error
 
-# This workflow deliberately stops at a verified release candidate. A maintainer reviews
-# the changelog and provenance status, downloads the artifact, and creates the release.
+  publish-release:
+    name: Publish Python distributions
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: verify-package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-candidate
+          path: release-assets
+      - name: Publish code-only distributions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test -s release-assets/SHA256SUMS
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --title "Turkish Markov $GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" --clobber
