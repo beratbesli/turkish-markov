@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import secrets
 import sqlite3
 import threading
 import webbrowser
@@ -21,6 +22,7 @@ from .markov import MarkovGenerator
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATABASE = PROJECT_ROOT / "turkish.db"
+SESSION_KEY = secrets.token_urlsafe(32)
 
 
 HTML = r"""<!doctype html>
@@ -83,7 +85,8 @@ HTML = r"""<!doctype html>
 <script>
   let busy=false;
   document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab,.panel').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById(t.dataset.id).classList.add('active')});
-  async function post(url,data){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const j=await r.json();if(!r.ok)throw Error(j.error||'İşlem başarısız');return j}
+  const sessionKey = '__SESSION_KEY__';
+  async function post(url,data){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-Session-Key':sessionKey},body:JSON.stringify(data)});const j=await r.json();if(!r.ok)throw Error(j.error||'İşlem başarısız');return j}
   function setBusy(v){busy=v;document.querySelector('#generateBtn').disabled=v;document.querySelector('#buildBtn').disabled=v}
   function status(id,text,kind=''){const e=document.getElementById(id);e.textContent=text;e.className='status '+kind}
   async function generateText(){
@@ -104,7 +107,7 @@ HTML = r"""<!doctype html>
     }catch(e){setBusy(false);status('gstatus','Bağlantı hatası: '+e.message,'bad')}
   }
   async function copyResult(){const text=document.querySelector('#result').value;if(!text)return;await navigator.clipboard.writeText(text);status('gstatus','Metin panoya kopyalandı','ok')}
-  async function closeApp(){if(busy&&!confirm('Bir işlem sürüyor. Yine de kapatılsın mı?'))return;await fetch('/api/shutdown',{method:'POST'});document.body.innerHTML='<main class="wrap"><h1>Uygulama kapatıldı.</h1><p>Bu sekmeyi kapatabilirsin.</p></main>'}
+  async function closeApp(){if(busy&&!confirm('Bir işlem sürüyor. Yine de kapatılsın mı?'))return;await post('/api/shutdown',{});document.body.innerHTML='<main class="wrap"><h1>Uygulama kapatıldı.</h1><p>Bu sekmeyi kapatabilirsin.</p></main>'}
 </script></body></html>"""
 
 
@@ -216,18 +219,24 @@ def _generate(data: dict[str, Any]) -> None:
 
 
 def _build(data: dict[str, Any]) -> None:
-    if not STATE.start("build", "Dosyalar hazırlanıyor..."):
-        raise ValueError("Başka bir işlem devam ediyor.")
+    if not isinstance(data.get("input"), str) or not isinstance(data.get("db"), str):
+        raise ValueError("Girdi ve veritabanı yolları metin olmalıdır.")
+    if not isinstance(data.get("overwrite", False), bool):
+        raise ValueError("Üzerine yazma seçeneği doğru/yanlış olmalıdır.")
     config = BuildConfig(
-        input_path=Path(str(data.get("input", "")).strip()),
-        database_path=Path(str(data.get("db", "")).strip()),
+        input_path=Path(data["input"].strip()),
+        database_path=Path(data["db"].strip()),
         order=int(data.get("order", 2)),
         mode=str(data.get("mode", "word")),
         workers=int(data.get("workers", 0)),
         encoding_errors="replace",
-        overwrite=bool(data.get("overwrite", False)),
+        overwrite=data.get("overwrite", False),
     )
     config.validate()
+    if config.overwrite:
+        _validate_overwrite_target(config.database_path)
+    if not STATE.start("build", "Dosyalar hazırlanıyor..."):
+        raise ValueError("Başka bir işlem devam ediyor.")
 
     def progress(phase: str, current: int, total: int, message: str) -> None:
         ratio = 100.0 if total <= 0 else min(100.0, current * 100.0 / total)
@@ -247,6 +256,19 @@ def _build(data: dict[str, Any]) -> None:
     _background("build", operation)
 
 
+def _validate_overwrite_target(path: Path) -> None:
+    """Confine destructive replacement to an ordinary model file in the app directory."""
+    if not str(path).strip() or path.suffix.lower() not in {".db", ".sqlite", ".sqlite3"}:
+        raise ValueError("Üzerine yazma yalnız model veritabanı dosyaları için kullanılabilir.")
+    root = PROJECT_ROOT.resolve()
+    target = path.expanduser().absolute()
+    parent = target.parent
+    if parent.is_symlink() or parent.resolve() not in {root, root / "models"}:
+        raise ValueError("Üzerine yazma yalnız uygulamanın model dizininde kullanılabilir.")
+    if target.is_symlink() or (target.exists() and not target.is_file()):
+        raise ValueError("Üzerine yazma hedefi normal bir dosya olmalıdır.")
+
+
 class RequestHandler(BaseHTTPRequestHandler):
     server_version = "TurkishMarkov/1.0"
 
@@ -263,8 +285,12 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _body(self) -> dict[str, Any]:
+        if self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower() != "application/json":
+            raise ValueError("Content-Type application/json olmalıdır.")
+        if self.headers.get("Transfer-Encoding"):
+            raise ValueError("Geçersiz istek aktarımı.")
         length = int(self.headers.get("Content-Length", "0"))
-        if length > 64 * 1024:
+        if length < 1 or length > 64 * 1024:
             raise ValueError("İstek çok büyük.")
         value = json.loads(self.rfile.read(length).decode("utf-8"))
         if not isinstance(value, dict):
@@ -272,11 +298,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         return value
 
     def do_GET(self) -> None:  # noqa: N802
+        if not self._trusted_host():
+            self._json({"error": "Geçersiz Host."}, HTTPStatus.FORBIDDEN)
+            return
         if self.path == "/":
             page = (
                 HTML.replace("__DEFAULT_DB__", escape(str(DEFAULT_DATABASE), quote=True))
                 .replace("__PROJECT_ROOT__", escape(str(PROJECT_ROOT), quote=True))
                 .replace("__NEW_DB__", escape(str(PROJECT_ROOT / "yeni_model.db"), quote=True))
+                .replace("__SESSION_KEY__", SESSION_KEY)
             ).encode("utf-8")
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -290,12 +320,20 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._json({"error": "Bulunamadı"}, HTTPStatus.NOT_FOUND)
 
     def do_POST(self) -> None:  # noqa: N802
+        expected_origin = f"http://127.0.0.1:{self.server.server_port}"
+        if not self._trusted_host() or self.headers.get("Origin") != expected_origin:
+            self._json({"error": "Geçersiz Origin veya Host."}, HTTPStatus.FORBIDDEN)
+            return
+        if not secrets.compare_digest(self.headers.get("X-Session-Key", ""), SESSION_KEY):
+            self._json({"error": "Geçersiz oturum anahtarı."}, HTTPStatus.FORBIDDEN)
+            return
         try:
+            body = self._body()
             if self.path == "/api/generate":
-                _generate(self._body())
+                _generate(body)
                 self._json({"ok": True}, HTTPStatus.ACCEPTED)
             elif self.path == "/api/build":
-                _build(self._body())
+                _build(body)
                 self._json({"ok": True}, HTTPStatus.ACCEPTED)
             elif self.path == "/api/shutdown":
                 self._json({"ok": True})
@@ -306,6 +344,9 @@ class RequestHandler(BaseHTTPRequestHandler):
             if STATE.snapshot().get("state") == "running":
                 STATE.update(state="error", message=str(exc))
             self._json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+
+    def _trusted_host(self) -> bool:
+        return self.headers.get("Host") == f"127.0.0.1:{self.server.server_port}"
 
 
 def main() -> None:
